@@ -111,49 +111,81 @@ def handle_eml(file_path, b64=False, file_name=None, parse_only_headers=False, m
         while parts:
             part = parts.pop()
 
-            logger.debug(f'Iterating over parts. Current part: {part.get_content_type()=}')
-            if (part.is_multipart() or part.get_content_type().startswith('multipart')) \
-                    and "attachment" not in part.get("Content-Disposition", ""):
-                parts += [part_ for part_ in part.get_payload() if isinstance(part_, email.message.Message)]
+            logger.debug(
+                f"Iterating over parts. Current part: {part.get_content_type()=}"
+            )
+            if (
+                part.is_multipart() or part.get_content_type().startswith("multipart")
+            ) and "attachment" not in part.get("Content-Disposition", ""):
+                parts += [
+                    part_
+                    for part_ in part.get_payload()
+                    if isinstance(part_, email.message.Message)
+                ]
 
-            elif part.get_filename()\
-                    or "attachment" in part.get("Content-Disposition", "")\
-                    or part.get("X-Attachment-Id")\
-                    or ("image" in part.get("Content-Type", '') and part.get("Content-Transfer-Encoding") == "base64"):
+            elif (
+                part.get_filename()
+                or "attachment" in part.get("Content-Disposition", "")
+                or part.get("X-Attachment-Id")
+                or (
+                    "image" in part.get("Content-Type", "")
+                    and part.get("Content-Transfer-Encoding") == "base64"
+                )
+            ):
 
-                attachment_content_id = part.get('Content-ID')
-                attachment_content_disposition = part.get('Content-Disposition')
+                attachment_content_id = part.get("Content-ID")
+                attachment_content_disposition = part.get("Content-Disposition")
                 attachment_file_name = get_attachment_filename(part)
 
-                if attachment_file_name is None and part.get('filename'):
-                    attachment_file_name = os.path.normpath(part.get('filename'))
+                if attachment_file_name is None and part.get("filename"):
+                    attachment_file_name = os.path.normpath(part.get("filename"))
                     if os.path.isabs(attachment_file_name):
                         attachment_file_name = os.path.basename(attachment_file_name)
 
-                if "message/rfc822" in part.get("Content-Type", "") \
-                        or ("application/octet-stream" in part.get("Content-Type", "") and
-                            attachment_file_name.endswith(".eml")):
+                if "message/rfc822" in part.get("Content-Type", "") or (
+                    "application/octet-stream" in part.get("Content-Type", "")
+                    and attachment_file_name.endswith(".eml")
+                ):
 
                     # .eml files
                     file_content = ""  # type: str
-                    base64_encoded = "base64" in part.get("Content-Transfer-Encoding", "")
+                    base64_encoded = "base64" in part.get(
+                        "Content-Transfer-Encoding", ""
+                    )
 
-                    if isinstance(part.get_payload(), list) and len(part.get_payload()) > 0:
-                        if attachment_file_name is None or attachment_file_name == "" or attachment_file_name == 'None':
+                    if (
+                        isinstance(part.get_payload(), list)
+                        and len(part.get_payload()) > 0
+                    ):
+                        if (
+                            attachment_file_name is None
+                            or attachment_file_name == ""
+                            or attachment_file_name == "None"
+                        ):
                             # in case there is no filename for the eml
                             # we will try to use mail subject as file name
                             # Subject will be in the email headers
-                            attachment_name = part.get_payload()[0].get('Subject', "no_name_mail_attachment")
-                            attachment_file_name = f'{attachment_name}.eml'
+                            attachment_name = part.get_payload()[0].get(
+                                "Subject", "no_name_mail_attachment"
+                            )
+                            attachment_file_name = f"{attachment_name}.eml"
 
                         file_content = part.get_payload()[0].as_string().strip()
-                        if base64_encoded:
+
+                        # Check if the content is actually base64 encoded by looking for email headers
+                        # If it has email headers (From:, To:, Subject:), it's already decoded
+                        # If it doesn't have headers and looks like base64, we need to decode it
+                        has_email_headers = any(
+                            header in file_content[:500]
+                            for header in ["From:", "To:", "Subject:", "Content-Type:"]
+                        )
+
+                        if base64_encoded and not has_email_headers:
+                            # Content is still base64 encoded, need to decode it
                             try:
                                 file_content = b64decode(file_content)
-
-                            except TypeError:
-                                pass  # In case the file is a string, decode=True for get_payload is not working
-                            except binascii.Error:
+                            except (TypeError, binascii.Error):
+                                # If decode fails, keep the original content
                                 pass
 
                     elif isinstance(part.get_payload(), str):
@@ -226,11 +258,20 @@ def handle_eml(file_path, b64=False, file_name=None, parse_only_headers=False, m
                             try:
                                 f.write(file_content)
                                 f.close()
-                                inner_msg, inner_attached_emails, attached_eml = handle_msg(f.name, attachment_file_name, False,
-                                                                                            max_depth - 1, original_depth)
+                                inner_msg, inner_attached_emails, attached_eml = (
+                                    handle_msg(
+                                        f.name,
+                                        attachment_file_name,
+                                        False,
+                                        max_depth - 1,
+                                        original_depth,
+                                    )
+                                )
                                 if attached_eml:
-                                    attached_eml = parse_inner_eml(attachments=attached_eml,
-                                                                   original_depth=original_depth)
+                                    attached_eml = parse_inner_eml(
+                                        attachments=attached_eml,
+                                        original_depth=original_depth,
+                                    )
                                     attached_emails += attached_eml
                                 if inner_msg:
                                     inner_msg['ParentFileName'] = file_name
