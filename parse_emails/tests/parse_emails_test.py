@@ -26,7 +26,7 @@ def test_parse_embedded_base64_eml_eml():
      - Validate that both emails are parsed (outer + inner with malformed content)
      - Verify the subjects are correct
     """
-    test_path = '/Users/meichler/dev/demisto/parse-emails/parse_emails/tests/test_data/embedded_base64_eml.eml'
+    test_path = 'parse_emails/tests/test_data/embedded_base64_eml.eml'
 
     email_parser = EmailParser(file_path=test_path, max_depth=2)
     results = email_parser.parse()
