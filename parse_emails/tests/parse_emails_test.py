@@ -31,10 +31,7 @@ def test_parse_embedded_base64_eml_eml():
     email_parser = EmailParser(file_path=test_path, max_depth=2)
     results = email_parser.parse()
     assert len(results) == 2
-    assert (
-        results[0]["Subject"]
-        == "Fax Document"
-    )
+    assert results[0]["Subject"] == "Fax Document"
     assert results[1]["Subject"] == "Inner Fax"
 
 
