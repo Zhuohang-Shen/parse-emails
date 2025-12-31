@@ -16,7 +16,7 @@ def test_parse_emails():
     assert results[0]['Subject'] == 'Fwd: test - inner attachment eml (base64)'
 
 
-def test_parse_noname_eml():
+def test_parse_embedded_base64_eml_eml():
     """
     Given:
      - noname.eml file containing a malicious/corrupted embedded EML attachment
@@ -26,16 +26,16 @@ def test_parse_noname_eml():
      - Validate that both emails are parsed (outer + inner with malformed content)
      - Verify the subjects are correct
     """
-    test_path = "noname.eml"
+    test_path = '/Users/meichler/dev/demisto/parse-emails/parse_emails/tests/test_data/embedded_base64_eml.eml'
 
     email_parser = EmailParser(file_path=test_path, max_depth=2)
     results = email_parser.parse()
     assert len(results) == 2
     assert (
         results[0]["Subject"]
-        == "Fax Document Recieved for Edf Remote CSID:a6930c8e18426e8588747786c6aee7c2"
+        == "Fax Document"
     )
-    assert results[1]["Subject"] == "Edf Fax Document Recieved for 17/12"
+    assert results[1]["Subject"] == "Inner Fax"
 
 
 def test_msg_html_with_attachments():
