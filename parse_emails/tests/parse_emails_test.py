@@ -16,6 +16,25 @@ def test_parse_emails():
     assert results[0]['Subject'] == 'Fwd: test - inner attachment eml (base64)'
 
 
+def test_parse_embedded_base64_eml_eml():
+    """
+    Given:
+     - noname.eml file containing a malicious/corrupted embedded EML attachment
+    When:
+     - parsing with max_depth=2 to parse both outer and inner emails
+    Then:
+     - Validate that both emails are parsed (outer + inner with malformed content)
+     - Verify the subjects are correct
+    """
+    test_path = 'parse_emails/tests/test_data/embedded_base64_eml.eml'
+
+    email_parser = EmailParser(file_path=test_path, max_depth=2)
+    results = email_parser.parse()
+    assert len(results) == 2
+    assert results[0]["Subject"] == "Fax Document"
+    assert results[1]["Subject"] == "Inner Fax"
+
+
 def test_msg_html_with_attachments():
     msg = MsOxMessage('parse_emails/tests/test_data/html_attachment.msg')
     assert msg is not None

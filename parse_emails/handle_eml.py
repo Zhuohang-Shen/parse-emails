@@ -147,13 +147,25 @@ def handle_eml(file_path, b64=False, file_name=None, parse_only_headers=False, m
                             attachment_file_name = f'{attachment_name}.eml'
 
                         file_content = part.get_payload()[0].as_string().strip()
-                        if base64_encoded:
+
+                        # Check if the content is actually base64 encoded
+                        # Python's email parser auto-decodes message/rfc822 parts that declare
+                        # Content-Transfer-Encoding: base64, so we need to detect if it's already decoded
+                        # by checking if it looks like valid email headers (starts with header pattern)
+                        is_already_decoded = False
+                        if base64_encoded and file_content:
+                            # Check if content starts with email headers using RFC 822 header pattern
+                            # Headers must start at beginning of content (not in body)
+                            first_line = file_content.lstrip().split('\n', 1)[0] if file_content else ''
+                            # Valid email headers match pattern: "Header-Name: value" or "From " (mbox format)
+                            is_already_decoded = bool(headerRE.match(first_line))
+
+                        if base64_encoded and not is_already_decoded:
+                            # Content is still base64 encoded, need to decode it
                             try:
                                 file_content = b64decode(file_content)
-
-                            except TypeError:
-                                pass  # In case the file is a string, decode=True for get_payload is not working
-                            except binascii.Error:
+                            except (TypeError, binascii.Error):
+                                # If decode fails, keep the original content
                                 pass
 
                     elif isinstance(part.get_payload(), str):

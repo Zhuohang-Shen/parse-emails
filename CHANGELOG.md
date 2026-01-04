@@ -1,4 +1,7 @@
 # Changelog
+v0.1.48
+* Fixed an issue where embedded EML attachments with base64 encoding were being double-decoded, causing parsing failures.
+
 v0.1.47
 * Fixed an issue where the headers_map['Subject'] not match 'Subject'.
 
